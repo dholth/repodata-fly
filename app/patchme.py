@@ -7,6 +7,9 @@ import tempfile
 import json
 import os.path
 import pathlib
+import logging
+
+log = logging.getLogger(__name__)
 
 cmd = "/jpatchset"
 
@@ -26,10 +29,10 @@ def patchme():
             if latest_path.exists():
                 latest = latest_path.read_text()
             for left, right in zip(series, series[1:]):
-                print(left, right)
                 if left <= latest:
-                    print(f"skip {left}")
+                    log.debug(f"skip {left}")
                     continue
+                print(left, right)
                 try:
                     subprocess.run(f"gunzip -c < {left} > {td}/{left}", shell=True, check=True)
                     subprocess.run(f"gunzip -c < {right} > {td}/{right}", shell=True, check=True)
