@@ -7,9 +7,11 @@ FROM python:${PYTHON_VERSION}
 
 COPY --from=gostatic-plus /goStatic /goStatic
 COPY hivemind /
+COPY jpatchset /
 
 RUN apt-get update && apt-get install -y \
     openssh-server \
+    less \
     vim \
     sqlite3 \
     python3-pip \
