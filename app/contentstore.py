@@ -84,12 +84,14 @@ def test_contentstore():
         content_hash = hash_func(content).hexdigest()
         assert (td / content_hash).exists()
         assert not response.from_cache
+        assert hasattr(response, "_content_path")
 
         response = session.get("https://repodata.fly.dev")
         content = response.content
         content_hash = hash_func(content).hexdigest()
         assert (td / content_hash).exists()
         assert response.from_cache
+        assert hasattr(response, "_content_path")
 
 
 if __name__ == "__main__":
