@@ -35,7 +35,7 @@ def patchme():
                     subprocess.run(f"gunzip -c < {right} > {td}/{right}", shell=True, check=True)
                     subprocess.run(f"{cmd} -l {td}/{left} -r {td}/{right} -p {patchset} -i -o", shell=True, check=True)
                 except subprocess.CalledProcessError as e:
-                    print(e)
+                    print(os.getcwd(), e)
                     continue
                 os.unlink(f"{td}/{left}")
                 os.unlink(f"{td}/{right}")

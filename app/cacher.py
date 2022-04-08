@@ -6,6 +6,7 @@ import requests_cache
 import pathlib
 import contentstore
 import os.path
+import json
 
 backend = contentstore.ContentStoreCache(
     db_path="content_cache", content_path="content"
@@ -46,6 +47,11 @@ for repo in REPOS:
             output = pathlib.Path(url.lstrip("https://"))
             stem = output.stem
             if not output.exists() or not response.from_cache:
+                try:
+                    json.loads(response.content)
+                except json.decoder.JSONDecodeError:
+                    print("NOT JSON")
+                    continue
                 if output.exists():
                     i = 0
                     while output.with_stem(f"{stem}-{i:03d}").exists():
