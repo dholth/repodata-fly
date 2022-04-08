@@ -4,9 +4,13 @@ Cache several conda repodata plus history.
 
 import requests_cache
 import pathlib
-import gzip
+import contentstore
+import os.path
 
-session = requests_cache.CachedSession(cache_control=True)
+backend = contentstore.ContentStoreCache(
+    db_path="content_cache", content_path="content"
+)
+session = requests_cache.CachedSession(backend=backend, cache_control=True)
 
 REPOS = [
     "repo.anaconda.com/pkgs/main",
@@ -48,4 +52,10 @@ for repo in REPOS:
                         i += 1
                     output.rename(output.with_stem(f"{stem}-{i:03d}"))
                 output.parent.mkdir(parents=True, exist_ok=True)
-                output.write_bytes(gzip.compress(response.content))
+                content_path: pathlib.Path = backend.responses.digest_path(
+                    response.content
+                )
+                relative = os.path.relpath(content_path, output.parent)
+                if output.is_symlink():
+                    output.unlink()  # if symlink was broken?
+                output.symlink_to(relative)
