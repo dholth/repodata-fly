@@ -29,7 +29,7 @@ class ContentStoreCache(SQLiteCache):
         # do we want to make it by default?
         self.content_path.mkdir(parents=True, exist_ok=True)
         self.responses = ContentStorePickleDict(
-            db_path, table_name="responses", **kwargs
+            db_path, content_path, table_name="responses", **kwargs
         )
 
 
@@ -40,26 +40,37 @@ class ContentStorePickleDict(SQLitePickleDict):
     Lightly compress content to save space.
     """
 
-    def __init__(self, content_path, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, db_path, content_path, **kwargs):
+        super().__init__(db_path, **kwargs)
         self.content_path = Path(content_path)
 
     def __setitem__(self, key, value):
 
         if hasattr(value, "_content"):
             with tempfile.NamedTemporaryFile(dir=self.content_path) as f:
-                gzip.GzipFile(fileobj=f, compresslevel=3).write(value._content)
+                gzip.GzipFile(fileobj=f, compresslevel=3, mode="w").write(
+                    value._content
+                )
                 digest = hash_func(value._content).hexdigest()
-                os.link(f.name, digest)
+                digest_path = self.content_path / digest
+                if not digest_path.exists():
+                    os.link(f.name, digest_path)
 
-            value = attrs.evolve(value, _content=digest)
+            value = attrs.evolve(value)
+            value._content = digest.encode(
+                "utf-8"
+            )  # attrs.evolve doesn't expect _content
+            value._content_path = str(digest_path)
 
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
         value = super().__getitem__(key)
-        with gzip.GzipFile(self.content_path / value._content, "r") as f:
-            return attrs.evolve(value, _content=f.read())
+        with gzip.GzipFile(
+            self.content_path / value._content.decode("utf-8"), "r"
+        ) as f:
+            value._content = f.read()
+        return value
 
 
 def test_contentstore():
@@ -67,7 +78,19 @@ def test_contentstore():
         td = Path(td)
         backend = ContentStoreCache(db_path=td / "content_cache", content_path=td)
         session = requests_cache.CachedSession(backend=backend)
+
         response = session.get("https://repodata.fly.dev")
-        content = response.body
+        content = response.content
         content_hash = hash_func(content).hexdigest()
         assert (td / content_hash).exists()
+        assert not response.from_cache
+
+        response = session.get("https://repodata.fly.dev")
+        content = response.content
+        content_hash = hash_func(content).hexdigest()
+        assert (td / content_hash).exists()
+        assert response.from_cache
+
+
+if __name__ == "__main__":
+    test_contentstore()
