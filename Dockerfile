@@ -5,6 +5,10 @@ ENTRYPOINT ["/goStatic"]
 
 FROM python:${PYTHON_VERSION}
 
+RUN cd /opt \
+    && curl https://downloads.python.org/pypy/pypy3.9-v7.3.9-linux64.tar.bz2 \
+    | tar -jx && ./pypy3.9-v7.3.9-linux64/bin/pypy3 -m venv pypy39
+
 COPY --from=gostatic-plus /goStatic /goStatic
 COPY hivemind /
 COPY jpatchset /
