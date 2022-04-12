@@ -45,6 +45,7 @@ for repo in REPOS:
             print(response.cache_key)
             print(response.headers)
             output = pathlib.Path(url.lstrip("https://"))
+            headers = output.with_stem(f"{output.stem}-headers")
             stem = output.stem
             if not output.exists() or not response.from_cache:
                 try:
@@ -57,6 +58,8 @@ for repo in REPOS:
                     while output.with_stem(f"{stem}-{i:03d}").exists():
                         i += 1
                     output.rename(output.with_stem(f"{stem}-{i:03d}"))
+                    if headers.exists():
+                        headers.rename(headers.with_stem(f"{headers.stem}-{i:03d}"))
                 output.parent.mkdir(parents=True, exist_ok=True)
                 content_path: pathlib.Path = backend.responses.digest_path(
                     response.content
@@ -65,3 +68,4 @@ for repo in REPOS:
                 if output.is_symlink():
                     output.unlink()  # if symlink was broken?
                 output.symlink_to(relative)
+                headers.write_text(json.dumps(dict(response.headers.lower_items())))
