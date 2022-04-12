@@ -10,7 +10,6 @@ is hash(line-1 + line)
 
 from hashlib import blake2b
 from io import RawIOBase, BytesIO
-import pprint
 import json
 from typing import Tuple
 
@@ -18,14 +17,13 @@ DIGEST_SIZE = 32  # 160 bits a minimum 'for security' length?
 MAX_LINEID_BYTES = 64
 
 
-def hfunc(data, key):
+def hfunc(data: str, key: bytes):
     # blake2b(digest_size=32).hexdigest() is the maximum blake2b key length
-    return blake2b(
-        data.encode("utf-8"), key=key.encode("utf-8"), digest_size=DIGEST_SIZE
-    )
+    print(data, key.hex())
+    return blake2b(data.encode("utf-8"), key=key, digest_size=DIGEST_SIZE)
 
 
-def bhfunc(data, key):
+def bhfunc(data: bytes, key: bytes):
     return blake2b(data, key=key, digest_size=DIGEST_SIZE)
 
 
@@ -47,27 +45,25 @@ def testlines():
         key = None
         for line in lines:
             if not key:
-                key = line
-                print(key)
+                key = bytes.fromhex(line)
+                print(key.hex())
                 continue
-            key = hfunc(line, key).hexdigest()
-            # print(key, line)
+            key = hfunc(line, key).digest()
             yield (key, line)
 
     l0 = list(line_numbers(lines))
-    pprint.pprint(l0)
 
     print()
     print("\n".join(lines))
 
     while len(l0):
         print()
-        f1 = [l0[0][0]] + [l[1] for l in l0[1:]]
+        f1 = [l0[0][0].hex()] + [l[1] for l in l0[1:]]
         print("\n".join(f1))
+        print(l0[-1][0].hex())
         print()
 
         l1 = list(line_numbers(f1))
-        pprint.pprint(l1)
 
         l0 = l1
 
@@ -75,7 +71,7 @@ def testlines():
 class JlapReader:
     def __init__(self, fp: RawIOBase):
         self.fp = fp
-        self.lineid = fp.readline().rstrip(b"\n")
+        self.lineid = bytes.fromhex(fp.readline().rstrip(b"\n").decode("utf-8"))
         assert len(self.lineid) <= MAX_LINEID_BYTES
 
     def read(self) -> Tuple[bytes, dict]:
@@ -84,25 +80,30 @@ class JlapReader:
         """
         line = self.fp.readline()
         if not line.endswith(b"\n"):  # last line
-            assert self.lineid == line, ("summary hash mismatch", self.lineid, line)
+            lineid_hex = self.lineid.hex()
+            assert lineid_hex == line.decode("utf-8"), (
+                "summary hash mismatch",
+                lineid_hex,
+                line,
+            )
             return
         # without newline
-        self.lineid = bhfunc(line[:-1], self.lineid).hexdigest().encode("utf-8")
+        self.lineid = bhfunc(line[:-1], self.lineid).digest()
         return (json.loads(line), self.lineid)
 
     def readobjs(self):
         obj = True
         while obj:
             obj = self.read()
-            yield obj
+            if obj:
+                yield obj
 
 
 class JlapWriter:
-    def __init__(
-        self, fp: RawIOBase, lineid: bytes = ("0" * DIGEST_SIZE * 2).encode("utf-8")
-    ):
+    def __init__(self, fp: RawIOBase, lineid: bytes = ("0" * DIGEST_SIZE * 2)):
+        lineid = bytes.fromhex(lineid)
         self.fp = fp
-        self.fp.write(lineid + b"\n")
+        self.fp.write(lineid.hex().encode("utf-8") + b"\n")
         self.lineid = lineid
 
     def write(self, obj):
@@ -110,17 +111,17 @@ class JlapWriter:
         Write one json line to file.
         """
         line = json.dumps(obj, ensure_ascii=False).encode("utf-8")
-        self.lineid = bhfunc(line, self.lineid).hexdigest().encode("utf-8")
+        self.lineid = bhfunc(line, self.lineid).digest()
         self.fp.write(line)
         self.fp.write(b"\n")
 
     def finish(self):
-        self.fp.write(self.lineid)
+        self.fp.write(self.lineid.hex().encode("utf-8"))
 
 
 def test():
     bio = BytesIO()
-    writer = JlapWriter(bio, ("0" * DIGEST_SIZE * 2).encode("utf-8"))
+    writer = JlapWriter(bio, ("0" * DIGEST_SIZE * 2))
     for i in range(10):
         writer.write(i)
     writer.finish()
@@ -134,9 +135,12 @@ def test():
     print("\nreading")
 
     reader = JlapReader(bio)
-    for obj in reader.readobjs():
-        print(obj)
+    print(reader.lineid.hex())
+    for line, hash in reader.readobjs():
+        print(line, hash.hex())
+    print(reader.lineid.hex())
 
 
 if __name__ == "__main__":
+    testlines()
     test()
