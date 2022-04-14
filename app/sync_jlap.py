@@ -85,7 +85,7 @@ def update():
                     response.status_code, len(response.content), url, response.headers
                 )
                 if response.status_code == 200:
-                    print("Overwrite")
+                    print("Full download")
                     output.write_bytes(response.content)
                 elif response.status_code == 206:
                     size_before = os.stat(output).st_size

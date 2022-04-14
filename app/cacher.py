@@ -1,40 +1,82 @@
 """
 Cache several conda repodata plus history.
+
+Uses Mercurial to track older revisions - more efficient than git for this use case.
 """
 
-import requests_cache
+from pathlib import Path
+from no_cache import discard_serializer
+from requests_cache import CachedSession
+
 import pathlib
-import contentstore
-import os.path
 import json
 
-backend = contentstore.ContentStoreCache(
-    db_path="content_cache", content_path="content"
+import subprocess
+
+
+session = CachedSession(
+    db_path="content_cache",
+    allowable_codes=[200, 206],
+    match_headers=["Accept", "Range"],
+    serializer=discard_serializer,
+    cache_control=True,
+    expire_after=600,  # otherwise cache only expires if response header says so
 )
-session = requests_cache.CachedSession(
-    backend=backend, cache_control=True, expire_after=600
-)
+
+session.headers["User-Agent"] = "repodata.fly.dev/0.0.1"
+
 
 REPOS = [
     "repo.anaconda.com/pkgs/main",
     "conda.anaconda.org/conda-forge",
 ]
 
+# All mentioned in channeldata.json, some active
 SUBDIRS = [
-    "linux-32",
+    # "linux-32",
     "linux-64",
-    "linux-aarch64",
-    "linux-armv6l",
-    "linux-armv7l",
-    "linux-ppc64le",
-    "linux-s390x",
+    # "linux-aarch64",
+    # "linux-armv6l",
+    # "linux-armv7l",
+    # "linux-ppc64le",
+    # "linux-s390x",
     "noarch",
     "osx-64",
     "osx-arm64",
-    "win-32",
+    # "win-32",
     "win-64",
-    "zos-z",
+    # "zos-z",
 ]
+
+FILENAMES = [
+    "repodata.json",
+    "repodata-headers.json",
+    "repodata-patch.json",
+    "repodata-patch.jlap",
+    "current_repodata.json",
+    "current_repodata-headers.json",
+    "current_repodata-patch.json",
+    "current_repodata-patch.jlap",
+]
+
+
+def commit(cwd):
+    if not Path(cwd, ".hg").exists():
+        subprocess.run(["hg", "init"], cwd=cwd, check=True)
+    subprocess.run(
+        ["hg", "add"] + [fn for fn in FILENAMES if Path(cwd, fn).exists()],
+        cwd=cwd,
+        check=True,
+    )
+    subprocess.run(
+        ["hg", "commit", "-u", "repodata", "-m", "checkpoint"], cwd=cwd, check=True,
+    )
+
+
+SHOW_HEADERS = set(
+    ("date", "content-type", "last-modified", "age", "expires", "cache-control",)
+)
+
 
 for repo in REPOS:
     for subdir in SUBDIRS:
@@ -45,7 +87,10 @@ for repo in REPOS:
             response = session.get(url)
             print(response.from_cache, url)
             print(response.cache_key)
-            print(response.headers)
+
+            print(
+                {k: v for k, v in response.headers.lower_items() if k in SHOW_HEADERS}
+            )
             output = pathlib.Path(url.lstrip("https://"))
             headers = output.with_stem(f"{output.stem}-headers")
             stem = output.stem
@@ -55,19 +100,13 @@ for repo in REPOS:
                 except json.decoder.JSONDecodeError:
                     print("NOT JSON")
                     continue
-                if output.exists():
-                    i = 0
-                    while output.with_stem(f"{stem}-{i:03d}").exists():
-                        i += 1
-                    output.rename(output.with_stem(f"{stem}-{i:03d}"))
-                    if headers.exists():
-                        headers.rename(headers.with_stem(f"{headers.stem}-{i:03d}"))
+
                 output.parent.mkdir(parents=True, exist_ok=True)
-                content_path: pathlib.Path = backend.responses.digest_path(
-                    response.content
-                )
-                relative = os.path.relpath(content_path, output.parent)
+
                 if output.is_symlink():
                     output.unlink()  # if symlink was broken?
-                output.symlink_to(relative)
+
+                output.write_bytes(response.content)
                 headers.write_text(json.dumps(dict(response.headers.lower_items())))
+
+            commit(output.parent)
