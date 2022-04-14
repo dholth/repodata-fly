@@ -66,17 +66,18 @@ FILENAMES = [
 def commit(cwd):
     if not Path(cwd, ".hg").exists():
         subprocess.run(["hg", "init"], cwd=cwd, check=True)
+    # on first commit(), later 'hg status' check will be clean with no files added
+    subprocess.run(
+        ["hg", "add"] + [fn for fn in FILENAMES if Path(cwd, fn).exists()],
+        cwd=cwd,
+        check=True,
+    )
     status = subprocess.run(
         ["hg", "status", "-am"], stdout=subprocess.PIPE, cwd=cwd, check=True
     )
     if status.stdout.decode("utf-8") == "":
         print("repository is clean")
         return
-    subprocess.run(
-        ["hg", "add"] + [fn for fn in FILENAMES if Path(cwd, fn).exists()],
-        cwd=cwd,
-        check=True,
-    )
     subprocess.run(
         ["hg", "commit", "-u", "repodata", "-m", "checkpoint"], cwd=cwd, check=True,
     )
