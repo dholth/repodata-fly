@@ -29,7 +29,10 @@ def patchme():
     chdir to desired directory, then call.
     """
     current_repodata = list(
-        filter(is_series, sorted(glob.glob("current_repodata*.json")),)
+        filter(
+            is_series,
+            sorted(glob.glob("current_repodata*.json")),
+        )
     )
     repodata = list(filter(is_series, sorted(glob.glob("repodata*.json"))))
 

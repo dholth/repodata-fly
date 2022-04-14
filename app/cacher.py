@@ -11,7 +11,9 @@ import json
 backend = contentstore.ContentStoreCache(
     db_path="content_cache", content_path="content"
 )
-session = requests_cache.CachedSession(backend=backend, cache_control=True)
+session = requests_cache.CachedSession(
+    backend=backend, cache_control=True, expire_after=600
+)
 
 REPOS = [
     "repo.anaconda.com/pkgs/main",

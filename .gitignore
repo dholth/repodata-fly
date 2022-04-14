@@ -1,0 +1,4 @@
+*.pyc
+*.sqlite
+__pycache__
+patches/
