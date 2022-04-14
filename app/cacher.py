@@ -23,6 +23,9 @@ session = CachedSession(
     expire_after=600,  # otherwise cache only expires if response header says so
 )
 
+with session.cache.responses.connection() as conn:
+    conn.execute("PRAGMA journal_mode=wal")
+
 session.headers["User-Agent"] = "repodata.fly.dev/0.0.1"
 
 
@@ -63,6 +66,12 @@ FILENAMES = [
 def commit(cwd):
     if not Path(cwd, ".hg").exists():
         subprocess.run(["hg", "init"], cwd=cwd, check=True)
+    status = subprocess.run(
+        ["hg", "status", "-am"], stdout=subprocess.PIPE, cwd=cwd, check=True
+    )
+    if status.stdout.decode("utf-8") == "":
+        print("repository is clean")
+        return
     subprocess.run(
         ["hg", "add"] + [fn for fn in FILENAMES if Path(cwd, fn).exists()],
         cwd=cwd,

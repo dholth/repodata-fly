@@ -17,7 +17,7 @@ ln -s /data/cacher/*.*.* /data/http
 cd /data/cacher
 while true; do
 	python /app/cacher.py
-	python /app/patchall.py
+	# python /app/patchall.py # revise for hg history store
 	/app/update-homepage.sh
 	sleep 300
 done
