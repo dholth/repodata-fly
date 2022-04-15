@@ -8,6 +8,7 @@ import subprocess
 import json
 import hashlib
 import sqlite3
+import itertools
 
 from pathlib import Path
 
@@ -19,7 +20,7 @@ def hash_func(data=b""):
 FILES = ["current_repodata.json", "repodata.json"]
 
 
-def make_patches(cwd=None, from_revision=0):
+def make_patches(file, cwd=None, from_revision=0):
 
     # log from oldest to newest
     revisions = json.loads(
@@ -31,32 +32,31 @@ def make_patches(cwd=None, from_revision=0):
         ).stdout
     )
 
-    for file in FILES:
-        previous = None
-        for rev_log in revisions:
-            if file in rev_log["files"]:
-                rev_bytes = subprocess.run(
-                    ["hg", "cat", "-r", rev_log["node"], file],
-                    cwd=cwd,
-                    stdout=subprocess.PIPE,
-                    check=True,
-                ).stdout
-                current = {
-                    "digest": hash_func(rev_bytes).hexdigest(),
-                    "obj": json.loads(rev_bytes),
+    previous = None
+    for rev_log in revisions:
+        if file in rev_log["files"]:
+            rev_bytes = subprocess.run(
+                ["hg", "cat", "-r", rev_log["node"], file],
+                cwd=cwd,
+                stdout=subprocess.PIPE,
+                check=True,
+            ).stdout
+            current = {
+                "digest": hash_func(rev_bytes).hexdigest(),
+                "obj": json.loads(rev_bytes),
+            }
+            rev_bytes = b""
+
+            if previous:
+                patch = jsonpatch.make_patch(previous["obj"], current["obj"])
+                patchobj = {
+                    "to": current["digest"],
+                    "from": previous["digest"],
+                    "patch": patch.patch,
                 }
-                rev_bytes = b""
+                yield (rev_log, file, patchobj)
 
-                if previous:
-                    patch = jsonpatch.make_patch(previous["obj"], current["obj"])
-                    patchobj = {
-                        "to": current["digest"],
-                        "from": previous["digest"],
-                        "patch": patch.patch,
-                    }
-                    yield (rev_log, file, patchobj)
-
-                previous = current
+            previous = current
 
 
 def store_patches(conn):
@@ -77,20 +77,22 @@ def store_patches(conn):
         """
     )
 
-    for repodata in Path().rglob("**/repodata.json"):
+    for repodata in itertools.chain(
+        Path().rglob("**/repodata.json"), Path().rglob("**/current_repodata.json")
+    ):
         base_path = repodata.parent
         base_url = str(base_path)
 
         # might need to be per-file
         newest_rev = conn.execute(
-            "SELECT max(hg_rev_to) FROM patches WHERE url LIKE ?", (f"{base_url}%",)
+            "SELECT max(hg_rev_to) FROM patches WHERE url = ?", (f"{repodata}",)
         ).fetchone()[0]
 
         if newest_rev is None:
             newest_rev = 0
 
         for rev, file, patch in make_patches(
-            cwd=base_path.absolute(), from_revision=newest_rev
+            cwd=base_path.absolute(), from_revision=newest_rev, file=repodata.name
         ):
             print(f"new patch for {base_url}/{file}")
             with conn:
