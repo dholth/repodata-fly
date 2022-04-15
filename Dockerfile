@@ -31,7 +31,8 @@ RUN mkdir -p /app
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt \
+    && /opt/pypy39/bin/pypy3 -m pip install -r requirements.txt
 
 # goStatic directory
 RUN ln -sf /data/http /srv/http

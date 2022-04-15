@@ -92,7 +92,7 @@ def store_patches(conn):
         for rev, file, patch in make_patches(
             cwd=base_path.absolute(), from_revision=newest_rev
         ):
-            print("new patch for {base_url}/{file}")
+            print(f"new patch for {base_url}/{file}")
             with conn:
                 conn.execute(
                     "INSERT INTO patches (url, hg_rev_to, patch) VALUES (?, ?, ?)",
@@ -104,6 +104,6 @@ if __name__ == "__main__":
     db_path = "/data/cacher/patches.sqlite"
     conn = sqlite3.connect(db_path)
     try:
-        store_patches()
+        store_patches(conn)
     finally:
         conn.close()
