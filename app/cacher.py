@@ -15,7 +15,7 @@ import subprocess
 
 
 session = CachedSession(
-    db_path="content_cache",
+    "http_cache_repodata",
     allowable_codes=[200, 206],
     match_headers=["Accept", "Range"],
     serializer=discard_serializer,

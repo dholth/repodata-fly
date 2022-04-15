@@ -66,8 +66,7 @@ def update():
                 f"https://{MIRROR}/{repo}/{subdir}/repodata-patch.jlap",
                 f"https://{MIRROR}/{repo}/{subdir}/current_repodata-patch.jlap",
             ]:
-
-                output = BASEDIR / Path(url.lstrip("https://"))
+                output = Path(BASEDIR, url.lstrip("https://"))
                 headers = {}
                 if not output.exists():
                     output.parent.mkdir(parents=True, exist_ok=True)
