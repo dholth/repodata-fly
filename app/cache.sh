@@ -18,7 +18,7 @@ cd /data/cacher
 while true; do
 	# todo time limit if it hangs
 	python /app/cacher.py
-	/opt/py39/bin/pypy3 /app/patchfromhg.py
+	/opt/pypy39/bin/pypy3 /app/patchfromhg.py
 	/app/update-homepage.sh
 	sleep 300
 done
