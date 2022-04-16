@@ -16,8 +16,9 @@ ln -s /data/cacher/*.*.* /data/http
 # periodic job
 cd /data/cacher
 while true; do
+	# todo time limit if it hangs
 	python /app/cacher.py
-	python /app/patchall.py
+	/opt/pypy39/bin/pypy3 /app/patchfromhg.py
 	/app/update-homepage.sh
 	sleep 300
 done

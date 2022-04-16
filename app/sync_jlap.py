@@ -63,11 +63,10 @@ def update():
     for repo in REPOS:
         for subdir in SUBDIRS:
             for url in [
-                f"https://{MIRROR}/{repo}/{subdir}/repodata-patch.jlap",
-                f"https://{MIRROR}/{repo}/{subdir}/current_repodata-patch.jlap",
+                f"https://{MIRROR}/{repo}/{subdir}/repodata.jlap",
+                f"https://{MIRROR}/{repo}/{subdir}/current_repodata.jlap",
             ]:
-
-                output = BASEDIR / Path(url.lstrip("https://"))
+                output = Path(BASEDIR, url.lstrip("https://"))
                 headers = {}
                 if not output.exists():
                     output.parent.mkdir(parents=True, exist_ok=True)
@@ -85,7 +84,7 @@ def update():
                     response.status_code, len(response.content), url, response.headers
                 )
                 if response.status_code == 200:
-                    print("Overwrite")
+                    print("Full download")
                     output.write_bytes(response.content)
                 elif response.status_code == 206:
                     size_before = os.stat(output).st_size

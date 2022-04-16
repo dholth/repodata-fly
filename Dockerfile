@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     python3-dev \
     python3-setuptools \
-    python3-wheel
+    python3-wheel \
+    mercurial
 
 COPY Procfile /
 
@@ -30,7 +31,8 @@ RUN mkdir -p /app
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt \
+    && /opt/pypy39/bin/pypy3 -m pip install -r requirements.txt
 
 # goStatic directory
 RUN ln -sf /data/http /srv/http
