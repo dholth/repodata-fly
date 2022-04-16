@@ -18,9 +18,6 @@ def hash_func(data=b""):
     return hashlib.blake2b(data, digest_size=32)
 
 
-FILES = ["current_repodata.json", "repodata.json"]
-
-
 def make_patches(file, cwd=None, from_revision=0):
 
     # log from oldest to newest
