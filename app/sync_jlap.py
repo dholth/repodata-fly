@@ -63,8 +63,8 @@ def update():
     for repo in REPOS:
         for subdir in SUBDIRS:
             for url in [
-                f"https://{MIRROR}/{repo}/{subdir}/repodata-patch.jlap",
-                f"https://{MIRROR}/{repo}/{subdir}/current_repodata-patch.jlap",
+                f"https://{MIRROR}/{repo}/{subdir}/repodata.jlap",
+                f"https://{MIRROR}/{repo}/{subdir}/current_repodata.jlap",
             ]:
                 output = Path(BASEDIR, url.lstrip("https://"))
                 headers = {}

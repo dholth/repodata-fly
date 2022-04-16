@@ -9,6 +9,7 @@ import json
 import hashlib
 import sqlite3
 import itertools
+import truncateable
 
 from pathlib import Path
 
@@ -100,6 +101,30 @@ def store_patches(conn):
                     "INSERT INTO patches (url, hg_rev_to, patch) VALUES (?, ?, ?)",
                     (f"{base_url}/{file}", rev["rev"], json.dumps(patch)),
                 )
+
+            # regenerate patch file right away
+            write_jlap(conn, base_url, file)
+
+
+def write_jlap(conn, base_url, file):
+    outfile = Path(base_url, file).with_suffix(".jlap")
+    assert not str(outfile).endswith(".json")
+    with outfile.open("wb+") as out:
+        writer = truncateable.JlapWriter(out)
+        latest_line = {}
+        for row in conn.execute(
+            "SELECT patch FROM patches WHERE url = ? ORDER BY hg_rev_to",
+            (f"{base_url}/{file}",),
+        ):
+            line = row[0]
+            # TODO add non-reparsing writer
+            latest_line = json.loads(line)
+            writer.write(latest_line)
+        # TODO get headers if available
+        writer.write(
+            {"url": f"https://{base_url}/{file}", "latest": latest_line.get("to"),}
+        )
+        writer.finish()
 
 
 if __name__ == "__main__":
