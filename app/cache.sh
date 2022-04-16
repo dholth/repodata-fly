@@ -19,6 +19,6 @@ while true; do
 	# todo time limit if it hangs
 	python /app/cacher.py
 	/opt/pypy39/bin/pypy3 /app/patchfromhg.py
-	/app/update-homepage.sh
+	/app/update-homepage.py
 	sleep 300
 done

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Synchronize local patch files with repodata.fly.dev
 """
