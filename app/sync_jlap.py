@@ -3,7 +3,6 @@ Synchronize local patch files with repodata.fly.dev
 """
 
 import os
-import sys
 
 from pathlib import Path
 from no_cache import discard_serializer
@@ -13,17 +12,21 @@ import truncateable
 
 import logging
 
-session = CachedSession(
-    "http_cache_jlap",
-    allowable_codes=[200, 206],
-    match_headers=["Accept", "Range"],
-    serializer=discard_serializer,
-    cache_control=True,
-    expire_after=30,  # otherwise cache only expires if response header says so
-)
+log = logging.getLogger(__name__)
 
 
-session.headers["User-Agent"] = "update-conda-cache/0.0.1"
+def make_session(db_path="http_cache_jlap"):
+    session = CachedSession(
+        str(db_path),
+        allowable_codes=[200, 206],
+        match_headers=["Accept", "Range"],
+        serializer=discard_serializer,
+        cache_control=True,
+        expire_after=30,  # otherwise cache only expires if response header says so
+    )
+    session.headers["User-Agent"] = "update-conda-cache/0.0.1"
+    return session
+
 
 REPOS = [
     "repo.anaconda.com/pkgs/main",
@@ -59,67 +62,88 @@ def line_offsets(path: Path):
         return 0
 
 
+class SyncJlap:
+    def __init__(self, session, basedir):
+        self.session = session
+        self.basedir = basedir
+
+    def update_url(self, url):
+        """
+        Update local copy of .jlap file at url, fetching only latest lines.
+
+        Return path to cached file.
+        """
+        session = self.session
+        output = Path(self.basedir, url.split("://", 1)[-1])
+        headers = {}
+        if not output.exists():
+            output.parent.mkdir(parents=True, exist_ok=True)
+            headers = {"Cache-Control": "no-cache"}
+        else:
+            offset = line_offsets(output)
+            headers = {"Range": "bytes=%d-" % offset}
+
+        response = session.get(url, headers=headers)
+        if response.from_cache:
+            log.debug(f"from_cache {url} expires {response.expires}")
+            return output
+
+        log.debug(
+            "%s %s %s %s",
+            response.status_code,
+            len(response.content),
+            url,
+            response.headers,
+        )
+
+        if response.status_code == 200:
+            log.info("Full download")
+            output.write_bytes(response.content)
+        elif response.status_code == 206:
+            size_before = os.stat(output).st_size
+            os.truncate(output, offset)
+            with output.open("ba") as out:
+                tell = out.tell()
+                log.info(
+                    "Append %d-%d (%d lines)",
+                    tell,
+                    tell + len(response.content),
+                    len(response.content.splitlines()),
+                )
+                out.write(response.content)
+            size_after = os.stat(output).st_size
+            log.info(
+                "Was %d, now %d bytes, delta %d",
+                size_before,
+                size_after,
+                (size_after - size_before),
+            )
+        else:
+            log.info("Unexpected status %d", response.status_code)
+
+        # verify checksum
+        # can cache checksum of next-to-last line instead of recalculating all
+        # (remove consumed lines from local file and store full length)
+        with output.open("rb") as fp:
+            jlap = truncateable.JlapReader(fp)
+            for _obj in jlap.readobjs():
+                pass
+
+        return output
+
+
 def update():
+    sync = SyncJlap(make_session(), BASEDIR)
+
     for repo in REPOS:
         for subdir in SUBDIRS:
             for url in [
                 f"https://{MIRROR}/{repo}/{subdir}/repodata.jlap",
                 f"https://{MIRROR}/{repo}/{subdir}/current_repodata.jlap",
             ]:
-                output = Path(BASEDIR, url.lstrip("https://"))
-                headers = {}
-                if not output.exists():
-                    output.parent.mkdir(parents=True, exist_ok=True)
-                    # XXX bypass cache if not output.exists()
-                else:
-                    offset = line_offsets(output)
-                    headers = {"Range": "bytes=%d-" % offset}
-
-                response = session.get(url, headers=headers)
-                if response.from_cache:
-                    print(f"from_cache {url} {response.expires}")
-                    continue
-
-                print(
-                    response.status_code, len(response.content), url, response.headers
-                )
-                if response.status_code == 200:
-                    print("Full download")
-                    output.write_bytes(response.content)
-                elif response.status_code == 206:
-                    size_before = os.stat(output).st_size
-                    os.truncate(output, offset)
-                    with output.open("ba") as out:
-                        tell = out.tell()
-                        print(
-                            "Append %d-%d (%d lines)"
-                            % (
-                                tell,
-                                tell + len(response.content),
-                                len(response.content.splitlines()),
-                            )
-                        )
-                        out.write(response.content)
-                    size_after = os.stat(output).st_size
-                    print(
-                        "Was %d, now %d bytes, delta %d"
-                        % (size_before, size_after, (size_after - size_before))
-                    )
-                else:
-                    print("Unexpected status %d" % response.status_code)
-
-                # verify checksum
-                # can cache checksum of next-to-last line instead of recalculating all
-                # (remove consumed lines from local file and store full length)
-                with output.open("rb") as fp:
-                    jlap = truncateable.JlapReader(fp)
-                    for _obj in jlap.readobjs():
-                        pass
-
-                print()
+                sync.update_url(url)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "-v":
-        logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     update()
