@@ -1,27 +1,27 @@
 name: Build .pyz
 
-    on:
-      release:
-        types: [created]
+on:
+  release:
+    types: [created]
 
-    jobs:
-      build:
+jobs:
+  build:
 
-        runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-        steps:
-        - uses: actions/checkout@v2
-        - name: Set up Python
-          uses: actions/setup-python@v2
-          with:
-            python-version: '3.x'
-        - name: Install dependencies
-          run: |
-            python -m pip install zipapps
-        - name: Build
-          run: |
-            sh build.sh
-        - uses: actions/upload-artifact@v3
-          with:
-            name: repodata
-            path: repodat.pyz
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Install dependencies
+      run: |
+        python -m pip install zipapps
+    - name: Build
+      run: |
+        sh build.sh
+    - uses: actions/upload-artifact@v3
+      with:
+        name: repodata
+        path: repodat.pyz
