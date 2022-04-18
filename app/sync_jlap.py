@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 def make_session(db_path="http_cache_jlap"):
     session = CachedSession(
-        "http_cache_jlap",
+        str(db_path),
         allowable_codes=[200, 206],
         match_headers=["Accept", "Range"],
         serializer=discard_serializer,
