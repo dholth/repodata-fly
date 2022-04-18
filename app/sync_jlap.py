@@ -89,7 +89,7 @@ class SyncJlap:
             return output
 
         log.info(
-            "%s %s %s",
+            "%s %s %s %s",
             response.status_code,
             len(response.content),
             url,

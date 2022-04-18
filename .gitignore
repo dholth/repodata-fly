@@ -1,5 +1,8 @@
 *.pyc
 *.sqlite
+*.dist-info
+.sconsign.*
+PKG-INFO
 .vscode
 __pycache__
 patches/
