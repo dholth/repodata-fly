@@ -1,4 +1,5 @@
 *.pyc
+*.pyz
 *.sqlite
 *.dist-info
 .sconsign.*

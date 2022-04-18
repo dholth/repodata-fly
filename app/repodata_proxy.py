@@ -11,6 +11,8 @@ $ python repodata_proxy.py &
 $ conda install -c http://localhost:8080/conda.anaconda.org/conda-forge <package>
 """
 
+import argparse
+import contextlib
 import gzip
 import json
 import logging
@@ -41,6 +43,14 @@ CHUNK_SIZE = 1 << 14
 session = sync_jlap.make_session((CACHE_DIR / "jlap_cache.db"))
 
 sync = sync_jlap.SyncJlap(session, CACHE_DIR)
+
+
+@contextlib.contextmanager
+def timeme(message=""):
+    begin = time.time()
+    yield
+    end = time.time()
+    log.debug(f"{message}{end-begin:0.02f}s")
 
 
 @route("/")
@@ -133,8 +143,6 @@ def mirror(server, path):
     jlap_url = f"{MIRROR_URL}/{server}/{path[:-len('.json')]}.jlap"
     jlap_path = sync.update_url(jlap_url)
 
-    log.info("patches: %s", jlap_url)
-
     cache_path = Path(CACHE_DIR / server / path).with_suffix(".json.gz")
     if not cache_path.exists():
         cache_path, digest = fetch_repodata_json(server, path, cache_path)
@@ -153,9 +161,9 @@ def mirror(server, path):
 
     new_data = apply_patches(cache_path, jlap_path)
 
-    log.info("Begin serialize")
-    buf = json.dumps(new_data)
-    log.info("End serialize")
+    with timeme("Serialize "):
+        buf = json.dumps(new_data)
+
     patched_path = cache_path.with_suffix(".new.json.gz")
     with gzip.open(patched_path, "wt", compresslevel=3) as out:
         out.write(buf)
@@ -217,7 +225,7 @@ def static_file_headers(
         headers["Date"] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
         return HTTPResponse(status=304, **headers)
 
-    body = "" if request.method == "HEAD" else open(filename, "rb")
+    body = ""  # to be replaced
 
     # headers["Accept-Ranges"] = "bytes"
     # ranges = request.environ.get("HTTP_RANGE")
@@ -235,12 +243,41 @@ def static_file_headers(
     return HTTPResponse(body, **headers)
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    log.setLevel(logging.DEBUG)
-
+def serve_cache(port=8080, bind="0.0.0.0"):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     log.info("Cache in %s", CACHE_DIR)
 
-    run()
+    run(port=port, host=bind)
+
+
+def go():
+    for name in "__main__", "sync_jlap", "update_conda_cache", "repodata_proxy":
+        logging.getLogger(name).setLevel(logging.DEBUG)
+
+    logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
+
+    parser = argparse.ArgumentParser(
+        description="Local conda channel proxy with efficient repodata.json updates"
+    )
+    parser.add_argument(
+        "port",
+        type=int,
+        default=8080,
+        help="Specify alternate port [default: 8000]",
+        nargs="?",
+    )
+    parser.add_argument(
+        "--bind",
+        metavar="ADDRESS",
+        default="0.0.0.0",
+        help="Specify alternate bind address [default: all interfaces]",
+    )
+
+    args = parser.parse_args()
+
+    serve_cache(args.port, args.bind)
+
+
+if __name__ == "__main__":
+    go()

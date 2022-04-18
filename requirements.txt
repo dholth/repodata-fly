@@ -1,2 +1,4 @@
 jsonpatch
 requests-cache
+bottle
+appdirs

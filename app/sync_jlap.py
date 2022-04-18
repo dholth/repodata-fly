@@ -85,16 +85,17 @@ class SyncJlap:
 
         response = session.get(url, headers=headers)
         if response.from_cache:
-            log.info(f"from_cache {url} {response.expires}")
+            log.debug(f"from_cache {url} expires {response.expires}")
             return output
 
-        log.info(
+        log.debug(
             "%s %s %s %s",
             response.status_code,
             len(response.content),
             url,
             response.headers,
         )
+
         if response.status_code == 200:
             log.info("Full download")
             output.write_bytes(response.content)
