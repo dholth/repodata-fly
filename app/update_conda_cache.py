@@ -15,15 +15,23 @@ import subprocess
 import jsonpatch
 import sys
 
-session = requests_cache.CachedSession(
-    cache_control=True, allowable_codes=(200, 206), expire_after=300
-)
-session.headers["User-Agent"] = "update-conda-cache/0.0.1"
+
+def make_session():
+    session = requests_cache.CachedSession(
+        cache_control=True, allowable_codes=(200, 206), expire_after=300
+    )
+    session.headers["User-Agent"] = "update-conda-cache/0.0.1"
+    return session
+
 
 # mirrored on patch server
 supported = re.compile(
     r"https://((conda\.anaconda\.org/conda-forge|repo.anaconda.com/pkgs/main)/.*)"
 )
+
+
+def hash_func(data: bytes = b""):
+    return hashlib.blake2b(data, digest_size=32)
 
 
 def conda_normalize_hash(data):
@@ -36,7 +44,7 @@ def conda_normalize_hash(data):
         "utf-8"
     )
 
-    data_hash = hashlib.blake2b(data_buffer, digest_size=32)
+    data_hash = hash_func(data_buffer)
     data_hash.update(b"\n")  # conda_build/index.py _write_repodata adds newline
     data_hash = data_hash.hexdigest()
 
@@ -70,6 +78,7 @@ def update_cache():
     """
     Look inside conda's cache, try to update the .json
     """
+    session = make_session()
 
     conda_info = json.loads(
         subprocess.run(

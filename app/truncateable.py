@@ -74,7 +74,7 @@ class JlapReader:
         self.lineid = bytes.fromhex(fp.readline().rstrip(b"\n").decode("utf-8"))
         assert len(self.lineid) <= MAX_LINEID_BYTES
 
-    def read(self) -> Tuple[bytes, dict]:
+    def read(self) -> Tuple[dict, bytes]:
         """
         Read one json line from file. Yield (line id, obj)
         """
