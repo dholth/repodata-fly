@@ -1,9 +1,6 @@
 name: Build .pyz
 
-
-on:
-  release:
-    types: [created]
+on: [push]
 
 jobs:
   build:
