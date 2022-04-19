@@ -10,8 +10,11 @@ import hashlib
 import sqlite3
 import itertools
 import truncateable
+import logging
 
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 
 def hash_func(data=b""):
@@ -99,11 +102,19 @@ def store_patches(conn):
                     (f"{base_url}/{file}", rev["rev"], json.dumps(patch)),
                 )
 
+            headers = None
+            headers_file = repodata.with_stem(f"{repodata.stem}-headers")
+            if headers_file.exists():
+                try:
+                    headers = json.loads(headers_file.read_text())
+                except json.JSONDecodeError:
+                    log.debug("%s was not JSON", headers_file)
+
             # regenerate patch file right away
-            write_jlap(conn, base_url, file)
+            write_jlap(conn, base_url, repodata.name, headers=headers)
 
 
-def write_jlap(conn, base_url, file):
+def write_jlap(conn, base_url, file, headers):
     outfile = Path(base_url, file).with_suffix(".jlap")
     assert not str(outfile).endswith(".json")
     with outfile.open("wb+") as out:
@@ -117,9 +128,13 @@ def write_jlap(conn, base_url, file):
             # TODO add non-reparsing writer
             latest_line = json.loads(line)
             writer.write(latest_line)
-        # TODO get headers if available
+
         writer.write(
-            {"url": f"https://{base_url}/{file}", "latest": latest_line.get("to"),}
+            {
+                "url": f"https://{base_url}/{file}",
+                "latest": latest_line.get("to"),
+                "headers": headers,
+            }
         )
         writer.finish()
 
