@@ -159,7 +159,8 @@ def mirror(server, path):
 
     log.debug("serve %s", cache_path)
 
-    new_data = apply_patches(cache_path, jlap_path)
+    with timeme("Patch "):
+        new_data = apply_patches(cache_path, jlap_path)
 
     with timeme("Serialize "):
         buf = json.dumps(new_data)
