@@ -1,0 +1,26 @@
+name: Build .pyz
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install zipapps
+    - name: Build
+      run: |
+        sh buildapp.sh
+    - uses: actions/upload-artifact@v3
+      with:
+        name: repodata
+        path: repodata.pyz
