@@ -85,8 +85,9 @@ def store_patches(conn):
         base_url = str(base_path)
 
         # might need to be per-file
+        # exclude negative revisions, which count from the end in mercurial
         newest_rev = conn.execute(
-            "SELECT max(hg_rev_to) FROM patches WHERE url = ?", (f"{repodata}",)
+            "SELECT max(max(hg_rev_to), 0) FROM patches WHERE url = ?", (f"{repodata}",)
         ).fetchone()[0]
 
         if newest_rev is None:
@@ -95,29 +96,30 @@ def store_patches(conn):
         for rev, file, patch in make_patches(
             cwd=base_path.absolute(), from_revision=newest_rev, file=repodata.name
         ):
-            print(f"new patch for {base_url}/{file}")
+            log.info(f"new patch for {base_url}/{file}")
             with conn:
                 conn.execute(
                     "INSERT INTO patches (url, hg_rev_to, patch) VALUES (?, ?, ?)",
                     (f"{base_url}/{file}", rev["rev"], json.dumps(patch)),
                 )
 
-            headers = None
-            headers_file = repodata.with_stem(f"{repodata.stem}-headers")
-            if headers_file.exists():
-                try:
-                    headers = json.loads(headers_file.read_text())
-                except json.JSONDecodeError:
-                    log.debug("%s was not JSON", headers_file)
+        headers = None
+        headers_file = repodata.with_stem(f"{repodata.stem}-headers")
+        if headers_file.exists():
+            try:
+                headers = json.loads(headers_file.read_text())
+            except json.JSONDecodeError:
+                log.warn("%s was not JSON", headers_file)
 
-            # regenerate patch file right away
-            write_jlap(conn, base_url, repodata.name, headers=headers)
+        # regenerate patch file right away
+        write_jlap(conn, base_url, repodata.name, headers=headers)
 
 
 def write_jlap(conn, base_url, file, headers):
     outfile = Path(base_url, file).with_suffix(".jlap")
+    outfile_temp = Path(base_url, file).with_suffix(".jlap.tmp")
     assert not str(outfile).endswith(".json")
-    with outfile.open("wb+") as out:
+    with outfile_temp.open("wb+") as out:
         writer = truncateable.JlapWriter(out)
         latest_line = {}
         for row in conn.execute(
@@ -138,11 +140,20 @@ def write_jlap(conn, base_url, file, headers):
         )
         writer.finish()
 
+    if not outfile.exists() or outfile_temp.read_bytes() != outfile.read_bytes():
+        log.info("Overwrite changed %s", outfile)
+        outfile_temp.replace(outfile)
+
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        format="%(message)s", datefmt="%Y-%m-%dT%H:%M:%S", level=logging.INFO,
+    )
+    log.info("Update .jlap patchsets")
     db_path = "/data/cacher/patches.sqlite"
     conn = sqlite3.connect(db_path)
     try:
         store_patches(conn)
     finally:
         conn.close()
+    log.info("Finish update .jlap patchsets")
