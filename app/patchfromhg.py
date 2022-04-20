@@ -131,12 +131,13 @@ def write_jlap(conn, base_url, file, headers):
             latest_line = json.loads(line)
             writer.write(latest_line)
 
+        latest = latest_line.get("to")
+        if not latest_line.get("to"):
+            # we like big buffers
+            latest = hash_func(Path(base_url, file).read_bytes()).digest().hex()
+
         writer.write(
-            {
-                "url": f"https://{base_url}/{file}",
-                "latest": latest_line.get("to"),
-                "headers": headers,
-            }
+            {"url": f"https://{base_url}/{file}", "latest": latest, "headers": headers,}
         )
         writer.finish()
 

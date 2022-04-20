@@ -33,7 +33,7 @@ def update_cache():
 
     REPOS = [
         "repo.anaconda.com/pkgs/main",
-        "repo.anaconda.com/pkgs/msys2",
+        "repo.anaconda.com/pkgs/msys2",  # could skip all but win-32, win-64 subdirs
         "repo.anaconda.com/pkgs/r",
         "conda.anaconda.org/conda-forge",
     ]
