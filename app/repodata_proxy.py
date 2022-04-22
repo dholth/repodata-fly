@@ -103,30 +103,42 @@ class DigestReader:
         return buf
 
 
-def apply_patches(cache_path, jlap_path):
+def apply_patches(cache_path: Path, jlap_path):
     """
     Return patched version of cache_path, as an object
     """
-    patches = []
+    jlap_lines = []
     with jlap_path.open("rb") as fp:
         jlap = truncateable.JlapReader(fp)
-        patches = list(obj for obj, _ in jlap.readobjs())
-        assert "latest" in patches[-1]
+        jlap_lines = list(obj for obj, _ in jlap.readobjs())
+        assert "latest" in jlap_lines[-1]
 
-    meta = patches[-1]
-    patches = patches[:-1]
+    meta = jlap_lines[-1]
+    patches = jlap_lines[:-1]
     digest_reader = DigestReader(gzip.open(cache_path))
     original = json.load(digest_reader)
-    original_hash = digest_reader.hash.digest()
+    assert digest_reader.read() == b""
+    original_hash = digest_reader.hash.digest().hex()
+
+    # XXX improve cache / re-download full file using standard cache rules
+    if (original_hash != meta["latest"]) and not any(
+        original_hash == patch["from"] for patch in patches
+    ):
+        log.info(
+            f"Remove {cache_path} not found in patchset; {original_hash == meta['latest']} and not any 'from' hash"
+        )
+        cache_path.unlink()
 
     patched = update_conda_cache.apply_patches(
-        original, patches, original_hash.hex(), meta["latest"]
+        original, patches, original_hash, meta["latest"]
     )
     return patched
 
 
 @route(r"/<server:re:(repo\.anaconda\.com|conda\.anaconda\.org)>/<path:path>")
 def mirror(server, path):
+
+    log.debug("")  # blank line
 
     upstream = f"https://{server}/{path}"
 
@@ -166,7 +178,7 @@ def mirror(server, path):
         buf = json.dumps(new_data)
 
     patched_path = cache_path.with_suffix(".new.json.gz")
-    with gzip.open(patched_path, "wt", compresslevel=3) as out:
+    with gzip.open(patched_path, "wt") as out:
         out.write(buf)
 
     response = HTTPResponse(

@@ -16,6 +16,13 @@ import jsonpatch
 import sys
 
 
+def hf(hash):
+    """
+    Abbreviate hash for formatting.
+    """
+    return hash[:16] + '\N{HORIZONTAL ELLIPSIS}'
+
+
 def make_session():
     session = requests_cache.CachedSession(
         cache_control=True, allowable_codes=(200, 206), expire_after=300
@@ -61,14 +68,14 @@ def apply_patches(data, patches, have, want):
             want = patch["from"]
 
     if have != want:
-        print(f"No patch from local revision {have}")
+        print(f"No patch from local revision {hf(have)}")
         apply.clear()
 
-    print(f"Apply {len(apply)} patches {have} -> {want}...")
+    print(f"\nApply {len(apply)} patches {hf(have)} -> {hf(want)}...")
 
     while apply:
         patch = apply.pop()
-        print(f"{patch['from']} -> {patch['to']}, {len(patch['patch'])} steps")
+        print(f"{hf(patch['from'])} \N{RIGHTWARDS ARROW} {hf(patch['to'])}, {len(patch['patch'])} steps")
         data = jsonpatch.JsonPatch(patch["patch"]).apply(data, in_place=True)
 
     return data
