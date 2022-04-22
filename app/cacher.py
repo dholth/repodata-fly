@@ -59,11 +59,11 @@ def update_cache():
         "repodata.json",
         "repodata-headers.json",
         "repodata-patch.json",
-        "repodata-patch.jlap",
+        "repodata.jlap",
         "current_repodata.json",
         "current_repodata-headers.json",
         "current_repodata-patch.json",
-        "current_repodata-patch.jlap",
+        "current_repodata.jlap",
     ]
 
     def commit(cwd):
