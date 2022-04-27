@@ -71,7 +71,7 @@ def apply_patches(data, patches, have, want):
         print(f"No patch from local revision {hf(have)}")
         apply.clear()
 
-    print(f"\nApply {len(apply)} patches {hf(have)} -> {hf(want)}...")
+    print(f"\nApply {len(apply)} patches {hf(have)} \N{RIGHTWARDS ARROW} {hf(want)}...")
 
     while apply:
         patch = apply.pop()

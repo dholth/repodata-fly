@@ -4,8 +4,15 @@ append new data.
 
 <initial> line line line <summary hash>
 
-The hash of each line is hash(hash(line-1) + line) The hash of the second line
-is hash(line-1 + line)
+The hash of each line is hash(line, key=hash(line-1)) The hash of line 1 is
+hash(line, key=line0.decode('hex'))
+
+The newline character is not included in the hash.
+
+The last line is hash(line -1).hexdigest().
+
+The last line does not end with a line separator, so there is no blank line at
+the end of the file.
 """
 
 from hashlib import blake2b
