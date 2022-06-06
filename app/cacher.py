@@ -4,14 +4,13 @@ Cache several conda repodata plus history.
 Uses Mercurial to track older revisions - more efficient than git for this use case.
 """
 
+import json
+import pathlib
+import subprocess
 from pathlib import Path
+
 from no_cache import discard_serializer
 from requests_cache import CachedSession
-
-import pathlib
-import json
-
-import subprocess
 
 TIME_LIMIT = 600
 
@@ -82,11 +81,20 @@ def update_cache():
             print("repository is clean")
             return
         subprocess.run(
-            ["hg", "commit", "-u", "repodata", "-m", "checkpoint"], cwd=cwd, check=True,
+            ["hg", "commit", "-u", "repodata", "-m", "checkpoint"],
+            cwd=cwd,
+            check=True,
         )
 
     SHOW_HEADERS = set(
-        ("date", "content-type", "last-modified", "age", "expires", "cache-control",)
+        (
+            "date",
+            "content-type",
+            "last-modified",
+            "age",
+            "expires",
+            "cache-control",
+        )
     )
 
     for repo in REPOS:

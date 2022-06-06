@@ -5,22 +5,23 @@ Update local conda cache based on patchsets from repodata.fly.dev
 
 Requirements: `pip install jsonpatch requests-cache`
 """
-import json
-import requests_cache
-import hashlib
 import glob
+import hashlib
+import json
 import os
 import re
 import subprocess
-import jsonpatch
 import sys
+
+import jsonpatch
+import requests_cache
 
 
 def hf(hash):
     """
     Abbreviate hash for formatting.
     """
-    return hash[:16] + '\N{HORIZONTAL ELLIPSIS}'
+    return hash[:16] + "\N{HORIZONTAL ELLIPSIS}"
 
 
 def make_session():
@@ -75,7 +76,9 @@ def apply_patches(data, patches, have, want):
 
     while apply:
         patch = apply.pop()
-        print(f"{hf(patch['from'])} \N{RIGHTWARDS ARROW} {hf(patch['to'])}, {len(patch['patch'])} steps")
+        print(
+            f"{hf(patch['from'])} \N{RIGHTWARDS ARROW} {hf(patch['to'])}, {len(patch['patch'])} steps"
+        )
         data = jsonpatch.JsonPatch(patch["patch"]).apply(data, in_place=True)
 
     return data

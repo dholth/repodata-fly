@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-import glob, os, pathlib
+import glob
+import os
+import pathlib
 
 os.chdir("/data/http")
 

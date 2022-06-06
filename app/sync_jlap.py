@@ -3,15 +3,13 @@
 Synchronize local patch files with repodata.fly.dev
 """
 
+import logging
 import os
-
 from pathlib import Path
-from no_cache import discard_serializer
-from requests_cache import CachedSession
 
 import truncateable
-
-import logging
+from no_cache import discard_serializer
+from requests_cache import CachedSession
 
 log = logging.getLogger(__name__)
 

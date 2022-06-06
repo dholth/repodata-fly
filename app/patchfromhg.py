@@ -3,16 +3,16 @@
 Generate patches from Mercurial revisions.
 """
 
-import jsonpatch
-import subprocess
-import json
 import hashlib
-import sqlite3
 import itertools
-import truncateable
+import json
 import logging
-
+import sqlite3
+import subprocess
 from pathlib import Path
+
+import jsonpatch
+import truncateable
 
 log = logging.getLogger(__name__)
 
@@ -69,11 +69,11 @@ def store_patches(conn):
     conn.execute("PRAGMA journal_mode=wal")
     conn.execute(
         """
-        CREATE TABLE IF NOT EXISTS patches 
-            (id INTEGER PRIMARY KEY, 
-            url TEXT NOT NULL, 
-            hg_rev_to INTEGER, 
-            patch TEXT NOT NULL, 
+        CREATE TABLE IF NOT EXISTS patches
+            (id INTEGER PRIMARY KEY,
+            url TEXT NOT NULL,
+            hg_rev_to INTEGER,
+            patch TEXT NOT NULL,
             timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)
         """
     )
@@ -137,7 +137,11 @@ def write_jlap(conn, base_url, file, headers):
             latest = hash_func(Path(base_url, file).read_bytes()).digest().hex()
 
         writer.write(
-            {"url": f"https://{base_url}/{file}", "latest": latest, "headers": headers,}
+            {
+                "url": f"https://{base_url}/{file}",
+                "latest": latest,
+                "headers": headers,
+            }
         )
         writer.finish()
 
@@ -148,7 +152,9 @@ def write_jlap(conn, base_url, file, headers):
 
 if __name__ == "__main__":
     logging.basicConfig(
-        format="%(message)s", datefmt="%Y-%m-%dT%H:%M:%S", level=logging.INFO,
+        format="%(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+        level=logging.INFO,
     )
     log.info("Update .jlap patchsets")
     db_path = "/data/cacher/patches.sqlite"
