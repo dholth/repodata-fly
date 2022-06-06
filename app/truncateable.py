@@ -15,10 +15,10 @@ The last line does not end with a line separator, so there is no blank line at
 the end of the file.
 """
 
-from hashlib import blake2b
-from io import RawIOBase, BytesIO
 import json
-from typing import Tuple
+from hashlib import blake2b
+from io import BytesIO, IOBase
+from typing import Optional, Tuple
 
 DIGEST_SIZE = 32  # 160 bits a minimum 'for security' length?
 MAX_LINEID_BYTES = 64
@@ -75,24 +75,29 @@ def testlines():
         l0 = l1
 
 
+class JlapError(ValueError):
+    pass
+
+
 class JlapReader:
-    def __init__(self, fp: RawIOBase):
+    def __init__(self, fp: IOBase):
         self.fp = fp
         self.lineid = bytes.fromhex(fp.readline().rstrip(b"\n").decode("utf-8"))
         assert len(self.lineid) <= MAX_LINEID_BYTES
 
-    def read(self) -> Tuple[dict, bytes]:
+    def read(self) -> Optional[Tuple[dict, bytes]]:
         """
-        Read one json line from file. Yield (line id, obj)
+        Read one json line from file. Yield (obj, lineid)
         """
         line = self.fp.readline()
         if not line.endswith(b"\n"):  # last line
             lineid_hex = self.lineid.hex()
-            assert lineid_hex == line.decode("utf-8"), (
-                "summary hash mismatch",
-                lineid_hex,
-                line,
-            )
+            if lineid_hex != line.decode("utf-8"):
+                raise JlapError(
+                    "summary hash mismatch",
+                    lineid_hex,
+                    line,
+                )
             return
         # without newline
         self.lineid = bhfunc(line[:-1], self.lineid).digest()
@@ -107,11 +112,11 @@ class JlapReader:
 
 
 class JlapWriter:
-    def __init__(self, fp: RawIOBase, lineid: bytes = ("0" * DIGEST_SIZE * 2)):
-        lineid = bytes.fromhex(lineid)
+    def __init__(self, fp: IOBase, lineid: str = ("0" * DIGEST_SIZE * 2)):
+        lineid_bytes: bytes = bytes.fromhex(lineid)
         self.fp = fp
-        self.fp.write(lineid.hex().encode("utf-8") + b"\n")
-        self.lineid = lineid
+        self.fp.write(lineid_bytes.hex().encode("utf-8") + b"\n")
+        self.lineid = lineid_bytes
 
     def write(self, obj):
         """
