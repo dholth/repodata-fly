@@ -19,23 +19,20 @@ from __future__ import annotations
 import itertools
 import json
 import logging
-import os
 import shutil
-import tempfile
 from hashlib import blake2b
 from io import IOBase
 from pathlib import Path
 
 import click
 import jsonpatch
-from more_itertools import peekable
 from truncateable import JlapReader, JlapWriter
 
 log = logging.getLogger("__name__")
 
 # attempt to control individual patch size (will fall back to re-downloading
 # repodata.json) without serializing to bytes just to measure
-PATCH_STEPS_LIMIT = 512
+PATCH_STEPS_LIMIT = 8192
 
 
 DIGEST_SIZE = 32
