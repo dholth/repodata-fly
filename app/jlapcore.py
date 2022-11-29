@@ -75,4 +75,4 @@ def write_jlap_buffer(path: Path, buffer: list[tuple[int, str, str]]):
     """
     Write buffer from jlap_buffer() to path.
     """
-    path.write_text("\n".join(b[1] for b in buffer), encoding="utf-8")
+    path.write_text("\n".join(b[1] for b in buffer), encoding="utf-8", newline="\n")
