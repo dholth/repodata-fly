@@ -48,17 +48,39 @@ def trim(jlap: Path, target_size: int, target_path: Path | None = None):
     return True
 
 
+def trim_if_larger(high: int, low: int, jlap: Path):
+    """
+    Check the size of Path jlap.
+
+    If it is larger than high bytes, rewrite to be smaller than low bytes.
+
+    Return True if modified.
+    """
+    if jlap.stat().st_size > high:
+        print(f"trim {jlap.stat().st_size} \N{RIGHTWARDS ARROW} {low} {jlap}")
+        return trim(jlap, low, jlap)
+    return False
+
+
 @click.command()
-@click.option("--max-size", required=True, help="Maximum size.", default=(1 << 20) * 15)
 @click.option(
-    "--min-size", required=True, help="Size (after trim).", default=(1 << 20) * 5
+    "--high",
+    required=False,
+    help="Trim if larger than size.",
+    default=2**20 * 10,
+    show_default=True,
+)
+@click.option(
+    "--low",
+    required=False,
+    help="Maximum size after trim.",
+    default=2**20 * 3,
+    show_default=True,
 )
 @click.argument("jlap")
-def jlaptrim(max_size: int, min_size: int, jlap):
+def jlaptrim(high: int, low: int, jlap):
     jlap = Path(jlap).expanduser()
-    if jlap.stat().st_size > max_size:
-        print(f"trim {jlap.stat().st_size} \N{RIGHTWARDS ARROW} {min_size} {jlap}")
-        trim(jlap, min_size, jlap)
+    trim_if_larger(high, low, jlap)
 
 
 def go():

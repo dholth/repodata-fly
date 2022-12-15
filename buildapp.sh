@@ -5,5 +5,5 @@ python -m zipapps -p /usr/bin/python3 -c -m repodata_proxy:go -a repodata_proxy.
 chmod +x ../repodata.pyz
 
 # standalone json-to-jlap
-python -m zipapps -p /usr/bin/python3 -c -m json2jlap:go -a json2jlap.py,truncateable.py -r ../requirements-json2jlap.txt -o ../json2jlap.pyz
+python -m zipapps -p /usr/bin/python3 -c -m json2jlap:go -a json2jlap.py,truncateable.py,jlapcore.py,jlaptrim.py -r ../requirements-json2jlap.txt -o ../json2jlap.pyz
 chmod +x ../json2jlap.pyz

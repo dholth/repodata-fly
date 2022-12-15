@@ -1,17 +1,17 @@
 """
-Simple json to jlap "{input}/*/repodata.json" -> "{output}/*/repodata.jlap tool.
+Simple json to jlap "*/repodata.json" -> "*/repodata.jlap tool.
 
-Copy {input}/*/repodata.json to {input}/.cache/last-repodata.json.gz
+Copy */repodata.json to */.cache/repodata.json.last
 
-Read {output}/*/repodata.jlap
+Read */repodata.jlap
 
-Diff {output}*/repodata.json with {input}/.cache/repodata.json
+Diff */repodata.json with */.cache/repodata.json
 
-Write {output}/*/repodata.jlap
+Write */repodata.jlap
 
 Same for current_repodata.jlap
 
-Skip generating patch if it is over a certain size.
+If output jlap is larger than a set size, remove older diffs.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from pathlib import Path
 import click
 import jsonpatch
 from truncateable import JlapReader, JlapWriter
+from jlaptrim import trim_if_larger
 
 log = logging.getLogger("__name__")
 
@@ -117,7 +118,21 @@ def json2jlap_one(cache: Path, repodata: Path):
 @click.command()
 @click.option("--cache", required=True, help="Cache directory.")
 @click.option("--repodata", required=True, help="Repodata directory.")
-def json2jlap(cache, repodata):
+@click.option(
+    "--trim-low",
+    required=False,
+    default=2**20 * 5,
+    show_default=True,
+    help="Maximum size after trim.",
+)
+@click.option(
+    "--trim-high",
+    required=False,
+    default=0,
+    show_default=True,
+    help="Trim if larger than size; 0 to disable.",
+)
+def json2jlap(cache, repodata, trim_low, trim_high):
     cache = Path(cache).expanduser()
     repodata = Path(repodata).expanduser()
     repodatas = itertools.chain(
@@ -129,6 +144,8 @@ def json2jlap(cache, repodata):
         if not cachedir.is_dir():
             continue
         json2jlap_one(cachedir, repodata)
+        if trim_high > trim_low:
+            trim_if_larger(trim_high, trim_low, repodata)
 
 
 def go():
