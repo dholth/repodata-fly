@@ -145,7 +145,10 @@ def json2jlap(cache, repodata, trim_low, trim_high):
             continue
         json2jlap_one(cachedir, repodata)
         if trim_high > trim_low:
-            trim_if_larger(trim_high, trim_low, repodata)
+            repodata_jlap = repodata.with_suffix(".jlap")
+            if not repodata_jlap.exists():
+                continue
+            trim_if_larger(trim_high, trim_low, repodata_jlap)
 
 
 def go():
