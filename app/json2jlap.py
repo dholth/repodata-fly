@@ -121,7 +121,7 @@ def json2jlap_one(cache: Path, repodata: Path):
 @click.option(
     "--trim-low",
     required=False,
-    default=2**20 * 5,
+    default=2**20 * 3,
     show_default=True,
     help="Maximum size after trim.",
 )
