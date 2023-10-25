@@ -61,10 +61,12 @@ def testlines():
     l0 = list(line_numbers(lines))
 
     print()
+    print("Lines:")
     print("\n".join(lines))
 
     while len(l0):
         print()
+        print("Same ending checksum")
         f1 = [l0[0][0].hex()] + [l[1] for l in l0[1:]]
         print("\n".join(f1))
         print(l0[-1][0].hex())
@@ -122,7 +124,9 @@ class JlapWriter:
         """
         Write one json line to file.
         """
-        line = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        line = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode(
+            "utf-8"
+        )
         self.lineid = bhfunc(line, self.lineid).digest()
         self.fp.write(line)
         self.fp.write(b"\n")
