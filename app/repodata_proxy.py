@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
 Local server for (repo.anaconda.com|conda.anaconda.org) that caches
-repodata.json, and updates repodata.json using patches from repodata.fly.dev.
-Other requests (for packages e.g.) are redirects to the upstream server.
+repodata.json, and updates repodata.json using patches from "the official
+repository"! previously, repodata.fly.dev. Other requests (for packages e.g.)
+are redirects to the upstream server.
 
 Usage:
 
 $ python repodata_proxy.py &
 
-$ conda install -c http://localhost:8080/conda.anaconda.org/conda-forge <package>
+$ conda install -c http://localhost:8080/conda.anaconda.org/conda-forge
+<package>
 """
 
 import argparse
